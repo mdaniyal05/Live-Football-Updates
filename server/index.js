@@ -1,16 +1,27 @@
-import express from "express";
+import { WebSocketServer, WebSocket } from "ws";
 
-const app = express();
-const PORT = process.env.PORT || 8000;
+const wss = new WebSocketServer({ port: 8080 });
 
-app.use(express.json());
+wss.on("connection", (socket, request) => {
+  const ip = request.socket.remoteAddress;
 
-app.get("/", (req, res) => {
-  res.send("Server is running...");
+  socket.on("message", (rawData) => {
+    const message = rawData.toString();
+
+    console.log({ rawData });
+
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(`Server Broadcast: ${message}`);
+      }
+    });
+  });
+
+  socket.on("error", (err) => {
+    console.log(`Error: ${err.message} : ${ip}`);
+  });
+
+  socket.on("close", () => {
+    console.log("Client disconnected");
+  });
 });
-
-app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-});
-
-export default app;
